@@ -12,6 +12,9 @@ async function hasAccessToOrg(
   const isOrgMember = user.orgIds.includes(orgId);
   const isPersonalOrg = user.tokenIdentifier.includes(orgId);
 
+  console.log("isOrgMember", isOrgMember);
+  console.log("isPersonalOrg", isPersonalOrg);
+
   return isOrgMember || isPersonalOrg;
 }
 
@@ -29,24 +32,22 @@ export const createFile = mutation({
       );
     }
 
-    if (!args.orgId) {
-      throw new ConvexError("Organization ID is required.");
-    }
-
-    const user = await getUserByToken(ctx, identity.tokenIdentifier);
-
     const hasAccess = await hasAccessToOrg(
       ctx,
-      user.tokenIdentifier,
+      identity.tokenIdentifier,
       args.orgId
     );
 
     if (!hasAccess) {
-      await ctx.db.insert("files", {
-        name: args.name,
-        orgId: args.orgId,
-      });
+      throw new ConvexError(
+        "Unauthorized, you do not have access to this org."
+      );
     }
+
+    await ctx.db.insert("files", {
+      name: args.name,
+      orgId: args.orgId,
+    });
   },
 });
 
@@ -57,9 +58,11 @@ export const getFiles = query({
   async handler(ctx, args) {
     const identity = await ctx.auth.getUserIdentity();
 
-    if (!identity || !args.orgId) {
+    if (!identity) {
       return [];
     }
+
+    console.log("identity", identity);
 
     const hasAccess = await hasAccessToOrg(
       ctx,

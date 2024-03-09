@@ -35,11 +35,13 @@ export default function Home() {
         <div key={file._id}>{file.name}</div>
       ))}
 
-      <Button
-        onClick={() => createFile({ name: "My File", orgId: orgId ?? "" })}
-      >
-        Create File
-      </Button>
+      <SignedIn>
+        <Button
+          onClick={() => createFile({ name: "My File", orgId: orgId ?? "" })}
+        >
+          Create File
+        </Button>
+      </SignedIn>
     </main>
   );
 }
