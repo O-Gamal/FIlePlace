@@ -1,16 +1,11 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { api } from "@/convex/_generated/api";
-import {
-  SignInButton,
-  SignOutButton,
-  SignedIn,
-  SignedOut,
-  useOrganization,
-  useUser,
-} from "@clerk/nextjs";
-import { useMutation, useQuery } from "convex/react";
+import { useOrganization, useUser } from "@clerk/nextjs";
+import { useQuery } from "convex/react";
+
+import UploadButton from "./uploadButton";
+import FileCard from "./FileCard";
 
 export default function Home() {
   const { organization } = useOrganization();
@@ -19,7 +14,6 @@ export default function Home() {
   const userId = user?.id;
   const orgId = organization?.id ?? userId;
 
-  const createFile = useMutation(api.files.createFile);
   const files = useQuery(
     api.files.getFiles,
     orgId
@@ -30,18 +24,16 @@ export default function Home() {
   );
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      {files?.map((file) => (
-        <div key={file._id}>{file.name}</div>
-      ))}
-
-      <SignedIn>
-        <Button
-          onClick={() => createFile({ name: "My File", orgId: orgId ?? "" })}
-        >
-          Create File
-        </Button>
-      </SignedIn>
+    <main className="container pt-10">
+      <div className="flex items-center justify-between mb-10">
+        <h1 className="text-3xl font-bold">My Files</h1>
+        <UploadButton />
+      </div>
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {files?.map((file) => (
+          <FileCard key={file._id} file={file} />
+        ))}
+      </div>
     </main>
   );
 }
