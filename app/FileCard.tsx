@@ -26,12 +26,20 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-import { Doc } from "@/convex/_generated/dataModel";
-import { MoreVertical, TrashIcon } from "lucide-react";
-import { useState } from "react";
+import { Doc, Id } from "@/convex/_generated/dataModel";
+import {
+  FileIcon,
+  FileTextIcon,
+  GanttChartIcon,
+  ImageIcon,
+  MoreVertical,
+  TrashIcon,
+} from "lucide-react";
+import { ReactNode, useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useToast } from "@/components/ui/use-toast";
+import Image from "next/image";
 
 const FileCardMenu = ({ file }: { file: Doc<"files"> }) => {
   const [isDeleteConfimationDialogOpen, setIsDeleteConfimationDialogOpen] =
@@ -79,7 +87,7 @@ const FileCardMenu = ({ file }: { file: Doc<"files"> }) => {
 
       <DropdownMenu>
         <DropdownMenuTrigger>
-          <MoreVertical />
+          <MoreVertical className="w-5 h-5" />
         </DropdownMenuTrigger>
         <DropdownMenuContent>
           <DropdownMenuItem
@@ -98,12 +106,24 @@ const FileCardMenu = ({ file }: { file: Doc<"files"> }) => {
   );
 };
 
+function getFileUrl(fileId: Id<"_storage">) {
+  return process.env.NEXT_PUBLIC_CONVEX_URL + "/api/storage/" + fileId;
+}
+
 const FileCard = ({ file }: { file: Doc<"files"> }) => {
+  const typeIcons: Record<Doc<"files">["type"], ReactNode> = {
+    image: <ImageIcon />,
+    csv: <GanttChartIcon />,
+    pdf: <FileTextIcon />,
+    other: <FileIcon />,
+  };
+
   return (
     <>
       <Card>
         <CardHeader>
-          <CardTitle className="relative">
+          <CardTitle className="relative flex gap-2">
+            {typeIcons[file.type]}
             {file.name}
             <div className="absolute -right-2 top-0">
               <FileCardMenu file={file} />
@@ -111,10 +131,34 @@ const FileCard = ({ file }: { file: Doc<"files"> }) => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p>Card Content</p>
+          {file.type === "image" ? (
+            <div className="relative h-40">
+              <Image
+                src={getFileUrl(file.fileId)}
+                alt={file.name}
+                sizes="100%"
+                fill
+                priority
+                unoptimized={true}
+                className="rounded-md object-contain"
+              />
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-40 bg-gray-100 rounded-lg">
+              {typeIcons[file.type]}
+            </div>
+          )}
         </CardContent>
         <CardFooter>
-          <Button>Download</Button>
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => {
+              window.open(getFileUrl(file.fileId), "_blank");
+            }}
+          >
+            Download
+          </Button>
         </CardFooter>
       </Card>
     </>

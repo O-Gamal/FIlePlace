@@ -28,6 +28,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
+import { getFileType } from "@/lib/fileTypes";
 
 const formSchema = z.object({
   title: z.string().min(1).max(200),
@@ -69,16 +70,22 @@ export default function UploadButton() {
     }
 
     const postUrl = await uploadUrl();
+    const contentType = values.file[0].type;
 
     const result = await fetch(postUrl, {
       method: "POST",
-      headers: { "Content-Type": values.file[0].type },
+      headers: { "Content-Type": contentType },
       body: values.file[0],
     });
 
     const { storageId } = await result.json();
 
-    createFile({ name: values.title, fileId: storageId, orgId: orgId });
+    createFile({
+      name: values.title,
+      type: getFileType(contentType),
+      fileId: storageId,
+      orgId: orgId,
+    });
 
     form.reset();
     setIsFileUploadDialogOpen(false);
