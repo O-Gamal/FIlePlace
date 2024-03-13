@@ -33,6 +33,7 @@ import {
   GanttChartIcon,
   ImageIcon,
   MoreVertical,
+  StarIcon,
   TrashIcon,
 } from "lucide-react";
 import { ReactNode, useState } from "react";
@@ -47,6 +48,8 @@ const FileCardMenu = ({ file }: { file: Doc<"files"> }) => {
 
   const { toast } = useToast();
   const deleteFile = useMutation(api.files.deleteFile);
+
+  const toggleFavorite = useMutation(api.files.toggleFavorite);
 
   return (
     <>
@@ -90,6 +93,18 @@ const FileCardMenu = ({ file }: { file: Doc<"files"> }) => {
           <MoreVertical className="w-5 h-5" />
         </DropdownMenuTrigger>
         <DropdownMenuContent>
+          <DropdownMenuItem
+            onClick={() => {
+              toggleFavorite({
+                fileId: file._id,
+              });
+            }}
+          >
+            <div className="flex items-center gap-2 text-gray-500">
+              <StarIcon className="w-4 h-4" />
+              <span>Add to favorites</span>
+            </div>
+          </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => {
               setIsDeleteConfimationDialogOpen(true);

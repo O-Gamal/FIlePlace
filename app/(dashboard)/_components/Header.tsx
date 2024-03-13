@@ -9,7 +9,7 @@ import React from "react";
 
 const Header = () => {
   return (
-    <div className="border-b py-4 bg-slate-50">
+    <div className="border-b py-4 h-[72px] bg-slate-50">
       <div className="container flex justify-between items-center">
         <h3 className="text-xl font-semibold">FilePlace</h3>
         <div className="flex items-center gap-4">
