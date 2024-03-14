@@ -1,6 +1,6 @@
 import { Doc } from "@/convex/_generated/dataModel";
 
-type FileTypes = Doc<"files">["type"];
+export type FileTypes = Doc<"files">["type"];
 const FileTypes: Record<string, FileTypes> = {
   // Images
   "image/png": "image",

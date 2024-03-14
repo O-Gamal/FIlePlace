@@ -1,7 +1,7 @@
 const authConfig = {
   providers: [
     {
-      domain: "https://rare-humpback-48.clerk.accounts.dev",
+      domain: `https://${process.env.CLERK_HOSTNAME}`,
       applicationID: "convex",
     },
   ],

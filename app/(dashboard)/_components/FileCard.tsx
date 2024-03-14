@@ -13,6 +13,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 
 import {
@@ -28,6 +29,8 @@ import {
 
 import { Doc, Id } from "@/convex/_generated/dataModel";
 import {
+  ArchiveRestore,
+  DownloadIcon,
   FileIcon,
   FileTextIcon,
   GanttChartIcon,
@@ -36,18 +39,32 @@ import {
   StarIcon,
   TrashIcon,
 } from "lucide-react";
+
 import { ReactNode, useState } from "react";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useToast } from "@/components/ui/use-toast";
 import Image from "next/image";
+import { cn } from "@/lib/utils";
+import { Protect } from "@clerk/nextjs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { formatRelative, subDays } from "date-fns";
 
-const FileCardMenu = ({ file }: { file: Doc<"files"> }) => {
+const FileCardMenu = ({
+  file,
+  isFavorite,
+  isDeleted,
+}: {
+  file: Doc<"files">;
+  isFavorite: boolean;
+  isDeleted?: boolean;
+}) => {
   const [isDeleteConfimationDialogOpen, setIsDeleteConfimationDialogOpen] =
     useState(false);
 
   const { toast } = useToast();
-  const deleteFile = useMutation(api.files.deleteFile);
+  const deleteFile = useMutation(api.files.toggleDeleteFile);
+  const perminantlyDeleteFile = useMutation(api.files.perminantlyDeleteFile);
 
   const toggleFavorite = useMutation(api.files.toggleFavorite);
 
@@ -72,7 +89,7 @@ const FileCardMenu = ({ file }: { file: Doc<"files"> }) => {
             <AlertDialogAction
               variant="destructive"
               onClick={() => {
-                deleteFile({
+                perminantlyDeleteFile({
                   fileId: file._id,
                 });
                 toast({
@@ -101,20 +118,68 @@ const FileCardMenu = ({ file }: { file: Doc<"files"> }) => {
             }}
           >
             <div className="flex items-center gap-2 text-gray-500">
-              <StarIcon className="w-4 h-4" />
-              <span>Add to favorites</span>
+              <StarIcon
+                className={cn("w-4 h-4", {
+                  "fill-gray-500 ": isFavorite,
+                })}
+              />
+              <span className="">
+                {isFavorite ? "Remove from favorites" : "Add to favorites"}
+              </span>
             </div>
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => {
-              setIsDeleteConfimationDialogOpen(true);
+              window.open(getFileUrl(file.fileId), "_blank");
             }}
           >
-            <div className="flex items-center gap-2 text-red-500">
-              <TrashIcon className="w-4 h-4" />
-              <span>Delete</span>
+            <div className="flex items-center gap-2 text-gray-500">
+              <DownloadIcon className={cn("w-4 h-4")} />
+              <span className="">Download</span>
             </div>
           </DropdownMenuItem>
+          {isDeleted && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => {
+                  deleteFile({
+                    fileId: file._id,
+                  });
+                }}
+              >
+                <div className="flex items-center gap-2 text-gray-500">
+                  <ArchiveRestore className="w-4 h-4" />
+                  <span>Restore file</span>
+                </div>
+              </DropdownMenuItem>
+            </>
+          )}
+          <Protect role="org:admin" fallback={<></>}>
+            <DropdownMenuItem
+              onClick={() => {
+                if (isDeleted) {
+                  setIsDeleteConfimationDialogOpen(true);
+                } else {
+                  deleteFile({
+                    fileId: file._id,
+                  });
+                  toast({
+                    title: file.name + " has been moved to trash.",
+                    variant: "destructive",
+                    duration: 5000,
+                  });
+                }
+              }}
+            >
+              <div className="flex items-center gap-2 text-red-500">
+                <TrashIcon className="w-4 h-4" />
+                <span>
+                  {isDeleted ? "Permanently delete" : "Move to trash"}
+                </span>
+              </div>
+            </DropdownMenuItem>
+          </Protect>
         </DropdownMenuContent>
       </DropdownMenu>
     </>
@@ -125,7 +190,12 @@ function getFileUrl(fileId: Id<"_storage">) {
   return process.env.NEXT_PUBLIC_CONVEX_URL + "/api/storage/" + fileId;
 }
 
-const FileCard = ({ file }: { file: Doc<"files"> }) => {
+type FileCardProps = {
+  file: Doc<"files">;
+  isFavorite: boolean;
+  isDeleted?: boolean;
+};
+const FileCard = ({ file, isFavorite, isDeleted }: FileCardProps) => {
   const typeIcons: Record<Doc<"files">["type"], ReactNode> = {
     image: <ImageIcon />,
     csv: <GanttChartIcon />,
@@ -133,15 +203,23 @@ const FileCard = ({ file }: { file: Doc<"files"> }) => {
     other: <FileIcon />,
   };
 
+  const userProfile = useQuery(api.users.getUserProfile, {
+    userId: file.userId,
+  });
+
   return (
     <>
       <Card>
         <CardHeader>
-          <CardTitle className="relative flex gap-2">
+          <CardTitle className="relative flex gap-2 text-lg font-medium">
             {typeIcons[file.type]}
             {file.name}
             <div className="absolute -right-2 top-0">
-              <FileCardMenu file={file} />
+              <FileCardMenu
+                file={file}
+                isFavorite={isFavorite}
+                isDeleted={isDeleted}
+              />
             </div>
           </CardTitle>
         </CardHeader>
@@ -164,16 +242,19 @@ const FileCard = ({ file }: { file: Doc<"files"> }) => {
             </div>
           )}
         </CardContent>
-        <CardFooter>
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => {
-              window.open(getFileUrl(file.fileId), "_blank");
-            }}
-          >
-            Download
-          </Button>
+        <CardFooter className="flex items-center justify-between mt-2">
+          <div className="flex items-center gap-1.5">
+            <Avatar className="w-6 h-6">
+              <AvatarImage src={userProfile?.image} alt="User" />
+              <AvatarFallback>
+                {userProfile?.name?.slice(0, 2)?.toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <span className="text-gray-500 text-sm">{userProfile?.name}</span>
+          </div>
+          <div className="text-sm text-gray-500">
+            {formatRelative(new Date(file._creationTime), new Date())}
+          </div>
         </CardFooter>
       </Card>
     </>

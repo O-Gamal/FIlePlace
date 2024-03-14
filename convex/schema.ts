@@ -12,6 +12,7 @@ export default defineSchema({
     name: v.string(),
     type: FileType,
     orgId: v.string(),
+    userId: v.id("users"),
     fileId: v.id("_storage"),
   }).index("byOrgId", ["orgId"]),
 
@@ -21,8 +22,16 @@ export default defineSchema({
     orgId: v.string(),
   }).index("byUserId_byOrgId_byFileId", ["userId", "orgId", "fileId"]),
 
+  deletedFiles: defineTable({
+    fileId: v.id("files"),
+    userId: v.id("users"),
+    orgId: v.string(),
+  }).index("byUserId_byOrgId_byFileId", ["userId", "orgId", "fileId"]),
+
   users: defineTable({
     tokenIdentifier: v.string(),
     orgIds: v.array(v.string()),
+    name: v.optional(v.string()),
+    image: v.optional(v.string()),
   }).index("byTokenIdentifier", ["tokenIdentifier"]),
 });

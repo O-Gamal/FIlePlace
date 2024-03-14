@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { FileIcon, StarIcon } from "lucide-react";
+import { FileIcon, StarIcon, Trash } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import React from "react";
@@ -16,11 +16,19 @@ const links = [
     },
   },
   {
-    title: "favorites",
+    title: "Favorites",
     href: "/favorites",
     icon: {
       outlined: <StarIcon className="w-5 h-5" />,
       solid: <StarIcon className="w-5 h-5 fill-gray-600" />,
+    },
+  },
+  {
+    title: "Recently Deleted",
+    href: "/deleted",
+    icon: {
+      outlined: <Trash className="w-5 h-5" />,
+      solid: <Trash className="w-5 h-5 fill-gray-600" />,
     },
   },
 ];
