@@ -9,10 +9,24 @@ import SearchBar from "./SearchBar";
 import UploadButton from "./UploadButton";
 import FileCard from "./FileCard";
 import LoadingFiles from "./LoadingFiles";
-import { Doc } from "@/convex/_generated/dataModel";
+import { Doc, Id } from "@/convex/_generated/dataModel";
 import { FileTypes } from "@/lib/fileTypes";
 import { useState } from "react";
 import FileTypeFilter from "./FileTypeFilter";
+import FilesTable, { modifiedFile } from "./FilesTable";
+import { ColumnDef } from "@tanstack/react-table";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { formatRelative } from "date-fns";
+import FileActionsMenu from "./FileActionsMenu";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Grid2X2Icon,
+  Grid2x2,
+  GridIcon,
+  ListIcon,
+  RowsIcon,
+  TableIcon,
+} from "lucide-react";
 
 export const mapFavorites = (
   files: Doc<"files">[],
@@ -39,6 +53,59 @@ export const mapDeletedFiles = (
     {}
   ) as Record<string, boolean>;
 };
+
+function UserCell(userId: Id<"users">) {
+  const userProfile = useQuery(api.users.getUserProfile, {
+    userId,
+  });
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <Avatar className="w-6 h-6">
+        <AvatarImage src={userProfile?.image} alt="User" />
+        <AvatarFallback>
+          {userProfile?.name?.slice(0, 2)?.toUpperCase()}
+        </AvatarFallback>
+      </Avatar>
+      <span className="text-gray-500 text-sm">{userProfile?.name}</span>
+    </div>
+  );
+}
+
+const columns: ColumnDef<modifiedFile>[] = [
+  {
+    header: "File Name",
+    accessorKey: "name",
+  },
+  {
+    header: "Type",
+    accessorKey: "type",
+  },
+  {
+    header: "User",
+    cell: ({ row }) => {
+      return UserCell(row.original.userId);
+    },
+  },
+  {
+    header: "last modified",
+    cell: ({ row }) => {
+      return formatRelative(new Date(row.original._creationTime), new Date());
+    },
+  },
+  {
+    header: "Actions",
+    cell: ({ row }) => {
+      return (
+        <FileActionsMenu
+          file={row.original}
+          isFavorite={row.original.isFavorite}
+          isDeleted={row.original.isDeleted}
+        />
+      );
+    },
+  },
+];
 
 export default function Files({
   title = "My Files",
@@ -83,8 +150,6 @@ export default function Files({
       : "skip"
   );
 
-  console.log(files);
-
   const favoritesMap =
     favoriteFiles && files ? mapFavorites(files, favoriteFiles) : {};
 
@@ -97,6 +162,12 @@ export default function Files({
   const isEmptySearchResults = files && searchQuery && files.length === 0;
   const isEmptyFilterResults = files && filter !== "all" && files.length === 0;
 
+  const modifiedFiles = files?.map((file) => ({
+    ...file,
+    isFavorite: favoritesMap[file._id],
+    isDeleted: trashMap[file._id],
+  }));
+
   return (
     <>
       {isEmptyFiles ? (
@@ -108,32 +179,42 @@ export default function Files({
             <SearchBar />
             <UploadButton />
           </div>
-          <div className="flex items-center justify-between mb-10">
-            <SearchBar />
-            <FileTypeFilter filter={filter} setFilter={setFilter} />
-          </div>
 
-          {isEmptySearchResults || isEmptyFilterResults ? (
-            <div className="flex flex-col justify-center items-center gap-6 py-16">
-              <EmptyState />
+          <Tabs defaultValue="grid" className="w-full">
+            <div className="flex items-center justify-between mb-10">
+              <TabsList>
+                <TabsTrigger value="grid">
+                  <Grid2X2Icon className="w-5 h-5" />
+                </TabsTrigger>
+                <TabsTrigger value="table">
+                  <RowsIcon className="w-5 h-5" />
+                </TabsTrigger>
+              </TabsList>
+              <FileTypeFilter filter={filter} setFilter={setFilter} />
             </div>
-          ) : isLoaded ? (
-            <>
-              {/* <FilesTable files={files} favoritesMap={favoritesMap} /> */}
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {files?.map((file) => (
-                  <FileCard
-                    key={file._id}
-                    file={file}
-                    isFavorite={favoritesMap[file._id]}
-                    isDeleted={trashMap[file._id]}
-                  />
-                ))}
+            {isEmptySearchResults || isEmptyFilterResults ? (
+              <div className="flex flex-col justify-center items-center gap-6 py-10">
+                <EmptyState />
               </div>
-            </>
-          ) : (
-            <LoadingFiles />
-          )}
+            ) : isLoaded ? (
+              <>
+                <TabsContent value="grid">
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {modifiedFiles?.map((file) => (
+                      <FileCard key={file._id} file={file} />
+                    ))}
+                  </div>{" "}
+                </TabsContent>
+                <TabsContent value="table">
+                  {modifiedFiles && (
+                    <FilesTable data={modifiedFiles} columns={columns} />
+                  )}
+                </TabsContent>
+              </>
+            ) : (
+              <LoadingFiles />
+            )}
+          </Tabs>
         </>
       )}
     </>

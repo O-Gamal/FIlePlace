@@ -1,5 +1,3 @@
-import { Button } from "@/components/ui/button";
-
 import {
   Card,
   CardContent,
@@ -8,194 +6,30 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+import { Doc } from "@/convex/_generated/dataModel";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
-
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-
-import { Doc, Id } from "@/convex/_generated/dataModel";
-import {
-  ArchiveRestore,
-  DownloadIcon,
   FileIcon,
   FileTextIcon,
   GanttChartIcon,
   ImageIcon,
-  MoreVertical,
-  StarIcon,
-  TrashIcon,
 } from "lucide-react";
 
-import { ReactNode, useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { ReactNode } from "react";
+import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useToast } from "@/components/ui/use-toast";
 import Image from "next/image";
-import { cn } from "@/lib/utils";
-import { Protect } from "@clerk/nextjs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { formatRelative, subDays } from "date-fns";
-
-const FileCardMenu = ({
-  file,
-  isFavorite,
-  isDeleted,
-}: {
-  file: Doc<"files">;
-  isFavorite: boolean;
-  isDeleted?: boolean;
-}) => {
-  const [isDeleteConfimationDialogOpen, setIsDeleteConfimationDialogOpen] =
-    useState(false);
-
-  const { toast } = useToast();
-  const deleteFile = useMutation(api.files.toggleDeleteFile);
-  const perminantlyDeleteFile = useMutation(api.files.perminantlyDeleteFile);
-
-  const toggleFavorite = useMutation(api.files.toggleFavorite);
-
-  return (
-    <>
-      <AlertDialog
-        open={isDeleteConfimationDialogOpen}
-        onOpenChange={setIsDeleteConfimationDialogOpen}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader className="mb-4">
-            <AlertDialogTitle>
-              {`Are you sure you want to delete ${file.name}?`}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete this
-              file.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={() => {
-                perminantlyDeleteFile({
-                  fileId: file._id,
-                });
-                toast({
-                  title: file.name + " has been deleted successfully.",
-                  variant: "destructive",
-                  duration: 5000,
-                });
-              }}
-            >
-              Confirm Deletion
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <DropdownMenu>
-        <DropdownMenuTrigger>
-          <MoreVertical className="w-5 h-5" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent>
-          <DropdownMenuItem
-            onClick={() => {
-              toggleFavorite({
-                fileId: file._id,
-              });
-            }}
-          >
-            <div className="flex items-center gap-2 text-gray-500">
-              <StarIcon
-                className={cn("w-4 h-4", {
-                  "fill-gray-500 ": isFavorite,
-                })}
-              />
-              <span className="">
-                {isFavorite ? "Remove from favorites" : "Add to favorites"}
-              </span>
-            </div>
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => {
-              window.open(getFileUrl(file.fileId), "_blank");
-            }}
-          >
-            <div className="flex items-center gap-2 text-gray-500">
-              <DownloadIcon className={cn("w-4 h-4")} />
-              <span className="">Download</span>
-            </div>
-          </DropdownMenuItem>
-          {isDeleted && (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => {
-                  deleteFile({
-                    fileId: file._id,
-                  });
-                }}
-              >
-                <div className="flex items-center gap-2 text-gray-500">
-                  <ArchiveRestore className="w-4 h-4" />
-                  <span>Restore file</span>
-                </div>
-              </DropdownMenuItem>
-            </>
-          )}
-          <Protect role="org:admin" fallback={<></>}>
-            <DropdownMenuItem
-              onClick={() => {
-                if (isDeleted) {
-                  setIsDeleteConfimationDialogOpen(true);
-                } else {
-                  deleteFile({
-                    fileId: file._id,
-                  });
-                  toast({
-                    title: file.name + " has been moved to trash.",
-                    variant: "destructive",
-                    duration: 5000,
-                  });
-                }
-              }}
-            >
-              <div className="flex items-center gap-2 text-red-500">
-                <TrashIcon className="w-4 h-4" />
-                <span>
-                  {isDeleted ? "Permanently delete" : "Move to trash"}
-                </span>
-              </div>
-            </DropdownMenuItem>
-          </Protect>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </>
-  );
-};
-
-function getFileUrl(fileId: Id<"_storage">) {
-  return process.env.NEXT_PUBLIC_CONVEX_URL + "/api/storage/" + fileId;
-}
+import { formatRelative } from "date-fns";
+import FileActionsMenu, { getFileUrl } from "./FileActionsMenu";
 
 type FileCardProps = {
-  file: Doc<"files">;
-  isFavorite: boolean;
-  isDeleted?: boolean;
+  file: Doc<"files"> & {
+    isFavorite: boolean;
+    isDeleted: boolean;
+  };
 };
-const FileCard = ({ file, isFavorite, isDeleted }: FileCardProps) => {
+
+const FileCard = ({ file }: FileCardProps) => {
   const typeIcons: Record<Doc<"files">["type"], ReactNode> = {
     image: <ImageIcon />,
     csv: <GanttChartIcon />,
@@ -215,10 +49,10 @@ const FileCard = ({ file, isFavorite, isDeleted }: FileCardProps) => {
             {typeIcons[file.type]}
             {file.name}
             <div className="absolute -right-2 top-0">
-              <FileCardMenu
+              <FileActionsMenu
                 file={file}
-                isFavorite={isFavorite}
-                isDeleted={isDeleted}
+                isFavorite={file.isFavorite}
+                isDeleted={file.isDeleted}
               />
             </div>
           </CardTitle>
