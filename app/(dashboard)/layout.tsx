@@ -5,6 +5,8 @@ import Providers from "./Providers";
 import Header from "./_components/Header";
 import { Toaster } from "@/components/ui/toaster";
 import Sidebar from "./_components/Sidebar";
+import { SignedIn, SignedOut } from "@clerk/nextjs";
+import LandingPage from "./_components/LandingPage";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -23,9 +25,14 @@ export default function RootLayout({
       <body className={inter.className}>
         <Providers>
           <Header />
-          <Sidebar />
-          <div className="fixed left-[280px] right-0">{children}</div>
-          <Toaster />
+          <SignedIn>
+            <Sidebar />
+            <div className="fixed left-[280px] right-0">{children}</div>
+            <Toaster />
+          </SignedIn>
+          <SignedOut>
+            <LandingPage />
+          </SignedOut>
         </Providers>
       </body>
     </html>

@@ -14,7 +14,7 @@ const Header = () => {
         <h3 className="text-xl font-semibold">FilePlace</h3>
         <div className="flex items-center gap-4">
           <OrganizationSwitcher />
-          <UserButton />
+          <UserButton afterSignOutUrl="/" />
           <SignedOut>
             <SignInButton mode="modal">
               <Button>Sign In</Button>
